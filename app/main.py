@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI(title="DevOps API", version="1.0.0")
-
+# Stockage en mémoire : clé = id de l'item, valeur = données de l'item
 items: dict[int, dict] = {}
 
 
