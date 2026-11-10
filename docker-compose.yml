@@ -1,6 +1,24 @@
 services:
   api:
     build: .
+    image: devops-api:latest
+    container_name: devops-api
     ports:
       - "8000:8000"
     restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
