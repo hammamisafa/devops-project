@@ -24,15 +24,54 @@ jobs:
       - name: Lancer les tests
         run: python -m pytest -v
 
-  docker-build:
-    name: Build de l'image Docker
+  sast:
+    name: SAST (Bandit)
     runs-on: ubuntu-latest
-    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer Bandit
+        run: pip install bandit
+
+      - name: Scanner le code (sévérité moyenne et plus)
+        run: |
+          bandit -r app -ll -f txt | tee bandit-report.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: Sauvegarder le rapport
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.txt
+
+  docker-build:
+    name: Build et scan de l'image Docker
+    runs-on: ubuntu-latest
+    needs: [test, sast]
     steps:
       - uses: actions/checkout@v4
 
       - name: Construire l'image
         run: docker build -t devops-api:ci .
+
+      - name: Scanner l'image avec Trivy
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest image --scanners vuln \
+            --severity HIGH,CRITICAL --ignore-unfixed --exit-code 0 \
+            devops-api:ci | tee trivy-report.txt
+
+      - name: Sauvegarder le rapport Trivy
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report.txt
 
       - name: Tester le conteneur (/health)
         run: |
