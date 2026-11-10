@@ -36,3 +36,10 @@ def test_delete_item():
     item_id = created.json()["id"]
     assert client.delete(f"/items/{item_id}").status_code == 204
     assert client.get(f"/items/{item_id}").status_code == 404
+
+
+def test_metrics_endpoint():
+    client.get("/health")
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    assert "http_requests_total" in response.text
